@@ -6,19 +6,21 @@ import (
 
 	"github.com/AnggaPutraa/gobank/api"
 	db "github.com/AnggaPutraa/gobank/db/sqlc"
+	"github.com/AnggaPutraa/gobank/utils"
 	_ "github.com/lib/pq"
 )
 
-const (
-	dbDriver      = "postgres"
-	dbSource      = "postgresql://root:secret@localhost:5220/simple_bank?sslmode=disable"
-	serverAddress = "127.0.0.1:9000"
-)
-
 func main() {
-	var err error
+	conf, err := utils.LoadConfig(".")
 
-	connection, err := sql.Open(dbDriver, dbSource)
+	if err != nil {
+		log.Fatal("Can't read the env configuration")
+	}
+
+	connection, err := sql.Open(
+		conf.DbDriver,
+		conf.DbSource,
+	)
 
 	if err != nil {
 		log.Fatal("Can't connect to database with err,", err)
@@ -28,7 +30,7 @@ func main() {
 
 	server := api.NewServer(store)
 
-	err = server.Start(serverAddress)
+	err = server.Start(conf.ServerAddress)
 
 	if err != nil {
 		log.Fatal("Can't start the server: ", err)
