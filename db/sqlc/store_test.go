@@ -14,8 +14,6 @@ func TestTransferTx(t *testing.T) {
 	account1 := createRandomAccount(t)
 	account2 := createRandomAccount(t)
 
-	fmt.Println(">> before:", account1.Balance, account2.Balance)
-
 	n := 5
 	amount := int64(10)
 
@@ -85,8 +83,6 @@ func TestTransferTx(t *testing.T) {
 		toAccount := result.ToAccount
 		require.NotEmpty(t, toAccount)
 		require.Equal(t, account2.ID, toAccount.ID)
-
-		fmt.Println(">> tx:", fromAccount.Balance, toAccount.Balance)
 
 		diff1 := account1.Balance - fromAccount.Balance
 		diff2 := toAccount.Balance - account2.Balance

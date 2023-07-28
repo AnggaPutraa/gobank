@@ -12,6 +12,7 @@ import (
 
 func createRandomAccount(t *testing.T) Account {
 	user := createRandomUser(t)
+
 	arg := CreateAccountParams{
 		Owner:    user.Username,
 		Balance:  utils.RandomBalanceAmount(),
@@ -19,7 +20,6 @@ func createRandomAccount(t *testing.T) Account {
 	}
 
 	account, err := testQuery.CreateAccount(context.Background(), arg)
-
 	require.NoError(t, err)
 	require.NotEmpty(t, account)
 
@@ -40,7 +40,6 @@ func TestCreateAccount(t *testing.T) {
 func TestGetAccount(t *testing.T) {
 	account1 := createRandomAccount(t)
 	account2, err := testQuery.GetAccount(context.Background(), account1.ID)
-
 	require.NoError(t, err)
 	require.NotEmpty(t, account2)
 
@@ -60,7 +59,6 @@ func TestUpdateAccount(t *testing.T) {
 	}
 
 	account2, err := testQuery.UpdateAccount(context.Background(), arg)
-
 	require.NoError(t, err)
 	require.NotEmpty(t, account2)
 
@@ -83,21 +81,24 @@ func TestDeleteAccount(t *testing.T) {
 	require.Empty(t, account2)
 }
 
-func TestGetAccounts(t *testing.T) {
+func TestListAccounts(t *testing.T) {
+	var lastAccount Account
 	for i := 0; i < 10; i++ {
-		createRandomAccount(t)
+		lastAccount = createRandomAccount(t)
 	}
 
 	arg := GetAccountsParams{
+		Owner:  lastAccount.Owner,
 		Limit:  5,
-		Offset: 5,
+		Offset: 0,
 	}
 
 	accounts, err := testQuery.GetAccounts(context.Background(), arg)
 	require.NoError(t, err)
-	require.Len(t, accounts, 5)
+	require.NotEmpty(t, accounts)
 
 	for _, account := range accounts {
 		require.NotEmpty(t, account)
+		require.Equal(t, lastAccount.Owner, account.Owner)
 	}
 }
