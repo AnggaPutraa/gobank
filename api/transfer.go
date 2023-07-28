@@ -2,10 +2,12 @@ package api
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 
 	db "github.com/AnggaPutraa/gobank/db/sqlc"
+	"github.com/AnggaPutraa/gobank/token"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,16 +26,25 @@ func (server *Server) createTransfer(ctx *gin.Context) {
 		return
 	}
 
-	if !server.validateAccountCurrency(ctx, req.FromAccountId, req.Currency) {
+	fromAccount, ok := server.validateAccountCurrency(ctx, req.FromAccountId, req.Currency)
+	if !ok {
 		return
 	}
 
-	if !server.validateAccountCurrency(ctx, req.ToAccountId, req.Currency) {
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	if fromAccount.Owner != authPayload.Username {
+		err := errors.New("From account doesnt belong to the authenticated user")
+		ctx.JSON(http.StatusUnauthorized, errResponse(err))
+		return
+	}
+
+	_, ok = server.validateAccountCurrency(ctx, req.ToAccountId, req.Currency)
+	if !ok {
 		return
 	}
 
 	arg := db.TransferTxParams{
-		FromAccountID: req.FromAccountId,
+		FromAccountID: fromAccount.ID,
 		ToAccountID:   req.ToAccountId,
 		Amount:        req.Amount,
 	}
@@ -48,23 +59,23 @@ func (server *Server) createTransfer(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, res)
 }
 
-func (server *Server) validateAccountCurrency(ctx *gin.Context, accountId int64, currency string) bool {
+func (server *Server) validateAccountCurrency(ctx *gin.Context, accountId int64, currency string) (db.Account, bool) {
 	account, err := server.store.GetAccount(ctx, accountId)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
 			ctx.JSON(http.StatusNotFound, errResponse(err))
-			return false
+			return account, false
 		}
 		ctx.JSON(http.StatusInternalServerError, errResponse(err))
-		return false
+		return account, false
 	}
 
 	if account.Currency != currency {
 		err := fmt.Errorf("account [%d] currency missmatch: %s vs %s", account.ID, account.Currency, currency)
 		ctx.JSON(http.StatusBadRequest, errResponse(err))
-		return false
+		return account, false
 	}
 
-	return true
+	return account, true
 }
